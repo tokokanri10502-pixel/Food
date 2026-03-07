@@ -11,6 +11,62 @@ function getRelativeDate(daysOffset = 0) {
 // モックデータ：食品トレンドニュース
 const newsData = [
     {
+        id: 7001,
+        title: "「オートミール」ブームが第2章へ、料理研究家監修の絶品アレンジ本が発売",
+        category: "health",
+        categoryLabel: "健康",
+        date: "2026.03.07",
+        summary: "健康食の代名詞として定着したオートミール。今や「おにぎり」「お好み焼き」「リゾット」に変化し、食感の課題を克服した新世代レシピが若い世代にも浸透しつつある。",
+        source: "ヘルスケア・フード",
+        sourceUrl: "#",
+        icon: "fa-bowl-food",
+        gradient: "linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%)",
+        imageColor: "#27ae60",
+        viewCount: 3200
+    },
+    {
+        id: 7002,
+        title: "業務スーパーの「1kg激安シリーズ」、節約インフルエンサーが続々紹介",
+        category: "saving",
+        categoryLabel: "節約",
+        date: "2026.03.07",
+        summary: "物価高を背景に、業務スーパーの大容量かつ低価格商品を紹介するSNS投稿が急増。特に冷凍野菜や輸入バター、おにぎり具材が家計の味方として注目されている。",
+        source: "家計の味方ニュース",
+        sourceUrl: "#",
+        icon: "fa-piggy-bank",
+        gradient: "linear-gradient(to top, #fcc5e4 0%, #fda34b 15%, #ff7882 35%, #c8699e 52%, #7046aa 71%, #0c1db8 87%, #020f75 100%)",
+        imageColor: "#f39c12",
+        viewCount: 5400
+    },
+    {
+        id: 7003,
+        title: "ノンアルコール市場が拡大、高品質「クラフトノンアル」が乾杯シーンを変える",
+        category: "beverage",
+        categoryLabel: "飲料",
+        date: "2026.03.06",
+        summary: "「飲めない人に配慮する文化」が定着し、ビール・ワイン・カクテルをリアルに再現したノンアルコール飲料が高品質化。外食産業でも専用メニューを設けるお店が急増中。",
+        source: "PR TIMES",
+        sourceUrl: "#",
+        icon: "fa-wine-glass",
+        gradient: "linear-gradient(to right, #a1c4fd 0%, #c2e9fb 100%)",
+        imageColor: "#3498db",
+        viewCount: 2900
+    },
+    {
+        id: 7004,
+        title: "広島「広島牛」ブランど化に本腰、県産和牛の新ブランド認定基準を策定",
+        category: "hiroshima",
+        categoryLabel: "広島県",
+        date: "2026.03.06",
+        summary: "広島県産の和牛を全国ブランドに育てるため、独自の基準と認定制度が整備へ。県内の飲食店や通販サイトでも「広島牛」表記の統一化に向けた動きが広がっている。",
+        source: "中四国グルメナビ",
+        sourceUrl: "#",
+        icon: "fa-fire",
+        gradient: "linear-gradient(135deg, #FF512F 0%, #DD2476 100%)",
+        imageColor: "#e74c3c",
+        viewCount: 1800
+    },
+    {
         id: 505,
         title: "「米粉ライスペーパー」の進化、揚げるだけでおつまみになる『瞬間チップス』が大流行",
         category: "sns",
@@ -1801,60 +1857,86 @@ const dailyArticlePool = [
 ];
 
 // ========================================
-// 今日の日付に対応するデイリー記事を取得する関数
-// 2026年1月1日を起点として経過日数をインデックスに利用
+// 指定した日付に対応するデイリー記事のプールインデックスを取得
 // ========================================
-function getDailyArticle() {
-    // 基準日（2026年1月1日）
-    const baseDate = new Date(2026, 0, 1); // 月は0始まりのため0=January
-    const today = new Date();
-    today.setHours(0, 0, 0, 0); // 時刻を0にして日付だけで比較
+function getDailyArticleForDate(dateStr) {
+    const baseDate = new Date(2026, 0, 1);
+    const parts = dateStr.split('.');
+    const targetDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    targetDate.setHours(0, 0, 0, 0);
 
-    // 経過日数を計算
-    const elapsedDays = Math.floor((today - baseDate) / (1000 * 60 * 60 * 24));
-
-    // プール件数でローテーション（負の日数も考慮して Math.abs で処理）
-    const index = Math.abs(elapsedDays) % dailyArticlePool.length;
-
-    // 対応する記事を取得し、今日の日付を付与して返す
-    const article = { ...dailyArticlePool[index], date: getRelativeDate(0) };
-    return article;
+    const elapsedDays = Math.floor((targetDate - baseDate) / (1000 * 60 * 60 * 24));
+    return Math.abs(elapsedDays) % dailyArticlePool.length;
 }
 
 // ========================================
-// デイリー記事をnewsDataの先頭に追加する
-// localStorage を使って1日1回だけ追加し、重複を防ぐ
+// ユニークIDを日付から生成（衝突を避けるため95000番台を使用）
+// ========================================
+function getDailyUniqueId(dateStr) {
+    const baseDate = new Date(2026, 0, 1);
+    const parts = dateStr.split('.');
+    const targetDate = new Date(parts[0], parts[1] - 1, parts[2]);
+    targetDate.setHours(0, 0, 0, 0);
+    const elapsedDays = Math.floor((targetDate - baseDate) / (1000 * 60 * 60 * 24));
+    return 95000 + Math.abs(elapsedDays);
+}
+
+// ========================================
+// デイリー記事をnewsDataへ追加（蓄積型）
+// localStorage に履歴配列を保存し最大30日分を維持する
 // ========================================
 function injectDailyArticle() {
+    const STORAGE_KEY = 'food_trend_daily_history';
+    const MAX_DAYS = 30;
     const todayStr = getRelativeDate(0);
-    const lastInjectedDate = localStorage.getItem('daily_article_injected_date');
-    const lastInjectedId = localStorage.getItem('daily_article_injected_id');
 
-    const article = getDailyArticle();
+    // ── 旧形式キーからのマイグレーション ──
+    const legacyDate = localStorage.getItem('daily_article_injected_date');
+    const legacyId = localStorage.getItem('daily_article_injected_id');
+    if (legacyDate && legacyId && !localStorage.getItem(STORAGE_KEY)) {
+        const legacyPoolIndex = getDailyArticleForDate(legacyDate);
+        const migratedHistory = [{
+            date: legacyDate,
+            uniqueId: Number(legacyId),
+            poolIndex: legacyPoolIndex
+        }];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(migratedHistory));
+    }
+    localStorage.removeItem('daily_article_injected_date');
+    localStorage.removeItem('daily_article_injected_id');
 
-    // すでに今日追加済みの場合は重複しないように既存記事を更新するだけ
-    if (lastInjectedDate === todayStr && lastInjectedId) {
-        const existingIndex = newsData.findIndex(item => item.id === Number(lastInjectedId));
-        if (existingIndex === -1) {
-            // もし削除されていたら再追加
-            newsData.unshift(article);
-        }
-        return;
+    // ── 履歴の読み込み ──
+    let history = [];
+    try {
+        history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    } catch (e) {
+        history = [];
     }
 
-    // 前日に注入した記事をnewsDataから取り除く（日を跨いだとき）
-    if (lastInjectedId) {
-        const prevIndex = newsData.findIndex(item => item.id === Number(lastInjectedId));
-        if (prevIndex !== -1) {
-            newsData.splice(prevIndex, 1);
+    // ── 今日のエントリが未追加なら追加 ──
+    const todayEntry = history.find(entry => entry.date === todayStr);
+    if (!todayEntry) {
+        const poolIndex = getDailyArticleForDate(todayStr);
+        const uniqueId = getDailyUniqueId(todayStr);
+        history.push({ date: todayStr, uniqueId, poolIndex });
+
+        // 上限を超えた古い記事を削除
+        if (history.length > MAX_DAYS) {
+            history = history.slice(-MAX_DAYS);
         }
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
     }
 
-    // 新しい記事をnewsDataの先頭に追加
-    newsData.unshift(article);
-
-    // localStorageに記録
-    localStorage.setItem('daily_article_injected_date', todayStr);
-    localStorage.setItem('daily_article_injected_id', String(article.id));
+    // ── 履歴の全エントリを newsData へ注入 ──
+    history.forEach(entry => {
+        const exists = newsData.some(item => item.id === entry.uniqueId);
+        if (!exists) {
+            const template = dailyArticlePool[entry.poolIndex];
+            if (template) {
+                const article = { ...template, id: entry.uniqueId, date: entry.date };
+                newsData.push(article);
+            }
+        }
+    });
 }
 
