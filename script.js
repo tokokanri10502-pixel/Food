@@ -1178,6 +1178,9 @@ function applyFilters() {
         });
     }
 
+    // 日付の降順（新しい順）でソート
+    filteredData.sort((a, b) => b.date.localeCompare(a.date));
+
     renderNews(filteredData);
 
     // 検索結果がない場合の表示
@@ -1913,14 +1916,21 @@ function injectDailyArticle() {
         history = [];
     }
 
-    // ── 今日のエントリが未追加なら追加 ──
-    const todayEntry = history.find(entry => entry.date === todayStr);
-    if (!todayEntry) {
-        const poolIndex = getDailyArticleForDate(todayStr);
-        const uniqueId = getDailyUniqueId(todayStr);
-        history.push({ date: todayStr, uniqueId, poolIndex });
+    // ── 過去7日分をチェックして、未追加なら追加（ユーザーが数日アクセスしなかった場合の欠落を防ぐ） ──
+    let isUpdated = false;
+    for (let i = 7; i >= 0; i--) {
+        const dateStr = getRelativeDate(-i);
+        if (!history.find(entry => entry.date === dateStr)) {
+            const poolIndex = getDailyArticleForDate(dateStr);
+            const uniqueId = getDailyUniqueId(dateStr);
+            history.push({ date: dateStr, uniqueId, poolIndex });
+            isUpdated = true;
+        }
+    }
 
-        // 上限を超えた古い記事を削除
+    if (isUpdated) {
+        // 日付順にソートして上限を超えた古い記事を削除
+        history.sort((a, b) => a.date.localeCompare(b.date));
         if (history.length > MAX_DAYS) {
             history = history.slice(-MAX_DAYS);
         }
