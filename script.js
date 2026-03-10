@@ -1861,43 +1861,48 @@ const dailyArticlePool = [
 
 // ========================================
 // 指定した日付に対応するデイリー記事のプールインデックスを取得
+// subIndex を指定することで1日に複数の異なる記事を取得可能
 // ========================================
-function getDailyArticleForDate(dateStr) {
+function getDailyArticleForDate(dateStr, subIndex = 0) {
     const baseDate = new Date(2026, 0, 1);
     const parts = dateStr.split('.');
     const targetDate = new Date(parts[0], parts[1] - 1, parts[2]);
     targetDate.setHours(0, 0, 0, 0);
 
     const elapsedDays = Math.floor((targetDate - baseDate) / (1000 * 60 * 60 * 24));
-    return Math.abs(elapsedDays) % dailyArticlePool.length;
+    // 日付ごとに異なるオフセット（subIndex * 適当な素数）を加えてバリエーションを出す
+    return Math.abs(elapsedDays * 3 + subIndex) % dailyArticlePool.length;
 }
 
 // ========================================
 // ユニークIDを日付から生成（衝突を避けるため95000番台を使用）
 // ========================================
-function getDailyUniqueId(dateStr) {
+function getDailyUniqueId(dateStr, subIndex = 0) {
     const baseDate = new Date(2026, 0, 1);
     const parts = dateStr.split('.');
     const targetDate = new Date(parts[0], parts[1] - 1, parts[2]);
     targetDate.setHours(0, 0, 0, 0);
     const elapsedDays = Math.floor((targetDate - baseDate) / (1000 * 60 * 60 * 24));
-    return 95000 + Math.abs(elapsedDays);
+    // 1日あたり最大3件（0, 1, 2）を想定してIDを割り振る
+    return 95000 + Math.abs(elapsedDays) * 10 + subIndex;
 }
 
 // ========================================
 // デイリー記事をnewsDataへ追加（蓄積型）
 // localStorage に履歴配列を保存し最大30日分を維持する
+// 1日最低3件追加されるようにアップデート
 // ========================================
 function injectDailyArticle() {
     const STORAGE_KEY = 'food_trend_daily_history';
     const MAX_DAYS = 30;
+    const ITEMS_PER_DAY = 3; // 1日あたりの追加件数
     const todayStr = getRelativeDate(0);
 
     // ── 旧形式キーからのマイグレーション ──
     const legacyDate = localStorage.getItem('daily_article_injected_date');
     const legacyId = localStorage.getItem('daily_article_injected_id');
     if (legacyDate && legacyId && !localStorage.getItem(STORAGE_KEY)) {
-        const legacyPoolIndex = getDailyArticleForDate(legacyDate);
+        const legacyPoolIndex = getDailyArticleForDate(legacyDate, 0);
         const migratedHistory = [{
             date: legacyDate,
             uniqueId: Number(legacyId),
@@ -1920,19 +1925,35 @@ function injectDailyArticle() {
     let isUpdated = false;
     for (let i = 7; i >= 0; i--) {
         const dateStr = getRelativeDate(-i);
-        if (!history.find(entry => entry.date === dateStr)) {
-            const poolIndex = getDailyArticleForDate(dateStr);
-            const uniqueId = getDailyUniqueId(dateStr);
-            history.push({ date: dateStr, uniqueId, poolIndex });
-            isUpdated = true;
+        // その日のエントリが規定数(ITEMS_PER_DAY)あるかチェック
+        const dailyEntries = history.filter(entry => entry.date === dateStr);
+        
+        if (dailyEntries.length < ITEMS_PER_DAY) {
+            // 足りない分を追加
+            for (let sub = dailyEntries.length; sub < ITEMS_PER_DAY; sub++) {
+                const poolIndex = getDailyArticleForDate(dateStr, sub);
+                const uniqueId = getDailyUniqueId(dateStr, sub);
+                
+                // 既に同じIDが存在しないか二重チェック（マイグレーション済みデータなど）
+                if (!history.find(entry => entry.uniqueId === uniqueId)) {
+                    history.push({ date: dateStr, uniqueId, poolIndex });
+                    isUpdated = true;
+                }
+            }
         }
     }
 
     if (isUpdated) {
-        // 日付順にソートして上限を超えた古い記事を削除
-        history.sort((a, b) => a.date.localeCompare(b.date));
-        if (history.length > MAX_DAYS) {
-            history = history.slice(-MAX_DAYS);
+        // 日付順（昇順）、同じ日付ならID順でソート
+        history.sort((a, b) => {
+            if (a.date !== b.date) return a.date.localeCompare(b.date);
+            return a.uniqueId - b.uniqueId;
+        });
+        
+        // 保持件数上限（日数ベースで計算）
+        const maxEntries = MAX_DAYS * ITEMS_PER_DAY;
+        if (history.length > maxEntries) {
+            history = history.slice(-maxEntries);
         }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(history));
     }
