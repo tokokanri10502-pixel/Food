@@ -1870,8 +1870,9 @@ function getDailyArticleForDate(dateStr, subIndex = 0) {
     targetDate.setHours(0, 0, 0, 0);
 
     const elapsedDays = Math.floor((targetDate - baseDate) / (1000 * 60 * 60 * 24));
-    // 日付ごとに異なるオフセット（subIndex * 適当な素数）を加えてバリエーションを出す
-    return Math.abs(elapsedDays * 3 + subIndex) % dailyArticlePool.length;
+    // 日付ごとに異なるオフセット（subIndex を加味）を加えてバリエーションを出す
+    // 1日5件に変更したため、係数を5以上に設定して重複を避ける
+    return Math.abs(elapsedDays * 5 + subIndex) % dailyArticlePool.length;
 }
 
 // ========================================
@@ -1883,19 +1884,19 @@ function getDailyUniqueId(dateStr, subIndex = 0) {
     const targetDate = new Date(parts[0], parts[1] - 1, parts[2]);
     targetDate.setHours(0, 0, 0, 0);
     const elapsedDays = Math.floor((targetDate - baseDate) / (1000 * 60 * 60 * 24));
-    // 1日あたり最大3件（0, 1, 2）を想定してIDを割り振る
+    // 1日あたり最大5件（0-4）を想定してIDを割り振る
     return 95000 + Math.abs(elapsedDays) * 10 + subIndex;
 }
 
 // ========================================
 // デイリー記事をnewsDataへ追加（蓄積型）
 // localStorage に履歴配列を保存し最大30日分を維持する
-// 1日最低3件追加されるようにアップデート
+// 1日最低5件追加されるようにアップデート
 // ========================================
 function injectDailyArticle() {
     const STORAGE_KEY = 'food_trend_daily_history';
     const MAX_DAYS = 30;
-    const ITEMS_PER_DAY = 3; // 1日あたりの追加件数
+    const ITEMS_PER_DAY = 5; // 1日あたりの追加件数を5に変更
     const todayStr = getRelativeDate(0);
 
     // ── 旧形式キーからのマイグレーション ──

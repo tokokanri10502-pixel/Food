@@ -20,11 +20,18 @@ body {
     background-color: var(--bg-light);
     margin: 0;
     line-height: 1.6;
+    -webkit-overflow-scrolling: touch; /* iOSでのスクロールの滑らかさ向上 */
+}
+
+html {
+    scroll-behavior: smooth; /* スムーズなページ内スクロール */
 }
 
 h1,
 h2,
 h3 {
+>>>>+++ REPLACE
+
     font-family: 'Oswald', sans-serif;
     margin-top: 0;
 }
