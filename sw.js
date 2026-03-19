@@ -16,9 +16,10 @@ self.addEventListener('install', (event) => {
     caches.open(CACHE_NAME)
       .then((cache) => cache.addAll(ASSETS_TO_CACHE))
   );
+  // skipWaiting() はページ側のユーザー操作で呼ぶため、ここでは呼ばない
 });
 
-// 古いキャッシュの削除
+// 古いキャッシュの削除 + 即座にページを制御下に置く
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -29,8 +30,15 @@ self.addEventListener('activate', (event) => {
           }
         })
       );
-    })
+    }).then(() => self.clients.claim())
   );
+});
+
+// ページからの「今すぐ更新」メッセージを受け取り skipWaiting を実行
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 // リクエストをフェッチしてキャッシュを利用
