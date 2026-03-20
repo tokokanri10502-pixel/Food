@@ -845,7 +845,7 @@ function isArchiveDate(dateStr) {
     const diffTime = today - itemDate;
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    return diffDays > 7;
+    return diffDays >= 7;
 }
 
 
