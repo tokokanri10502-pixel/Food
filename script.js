@@ -2288,9 +2288,9 @@ function getDailyArticleForDate(dateStr, subIndex = 0) {
     targetDate.setHours(0, 0, 0, 0);
 
     const elapsedDays = Math.floor((targetDate - baseDate) / (1000 * 60 * 60 * 24));
-    // 日付ごとに異なるオフセット（subIndex を加味）を加えてバリエーションを出す
-    // 1日7件に変更したため、係数を7に設定（プール35件で5周する計算になり重複しない）
-    return Math.abs(elapsedDays * 7 + subIndex) % dailyArticlePool.length;
+    // 日次ステップ=31、subIndexステップ=37（いずれも270と互いに素な素数）
+    // → 同日7記事がプール全体に散らばり、特定カテゴリへの連続偏りを防止
+    return Math.abs(elapsedDays * 31 + subIndex * 37) % dailyArticlePool.length;
 }
 
 // ========================================
@@ -2637,7 +2637,7 @@ function setupMonthlyReport() {
 // 1日7件追加されるようにアップデート
 // ========================================
 function injectDailyArticle() {
-    const STORAGE_KEY = 'food_trend_daily_history';
+    const STORAGE_KEY = 'food_trend_daily_history_v2';
     const MAX_DAYS = 30;
     const ITEMS_PER_DAY = 7; // 1日あたりの追加件数
     const todayStr = getRelativeDate(0);
